@@ -79,9 +79,9 @@ def load_congress_library_json(path: str) -> list[dict]:
             if sc:
                 abstract["abstract_body"] = (abstract["abstract_body"] + " Conclusion: " + sc).strip()
         else:
-            # Simple list endpoint shape: {id, abstractNo, title, ...}
-            abstract_no = item.get("abstractNo") or item.get("abstract_number") or ""
-            raw_id = item.get("id", "")
+            # Simple list endpoint shape: {abstract_id, abstract_no, title, ...}
+            abstract_no = item.get("abstract_no") or item.get("abstractNo") or item.get("abstract_number") or ""
+            raw_id = item.get("abstract_id") or item.get("id", "")
             display_id = abstract_no if abstract_no else raw_id[:12] if len(raw_id) > 12 else raw_id
 
             title = item.get("title", "")

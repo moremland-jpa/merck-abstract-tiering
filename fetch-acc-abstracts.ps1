@@ -171,7 +171,7 @@ Write-Output "Wrote acc-abstracts.json ($($abstracts.Count) abstracts, $([math]:
 $summaryLines = @("ID | Title (first 80 chars)")
 $summaryLines += @("---|---")
 foreach ($a in $abstracts | Select-Object -First 50) {
-  $id = if ($a.abstractNo) { $a.abstractNo } elseif ($a.id) { $a.id } else { "?" }
+  $id = if ($a.abstract_no) { $a.abstract_no } elseif ($a.abstractNo) { $a.abstractNo } elseif ($a.abstract_id) { $a.abstract_id } elseif ($a.id) { $a.id } else { "?" }
   $title = if ($a.title) { $a.title } else { "(no title)" }
   if ($title.Length -gt 80) { $title = $title.Substring(0, 80) + "..." }
   $summaryLines += "$id | $title"
