@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+venv/
+.env
+acc-abstracts.json
+acc-abstracts-summary.txt
+local-samples/
+results/
