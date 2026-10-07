@@ -34,7 +34,12 @@ DEFAULT_OUTPUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ACC_T
 
 
 def load_congress_library_json(path: str) -> list[dict]:
-    """Map Congress Library abstract JSON to the format the PDF builder expects."""
+    """Map Congress Library abstract JSON to the format the PDF builder expects.
+
+    Handles two shapes:
+    - List endpoint (GET /abstracts_by_congress): {id, abstractNo, title} only
+    - Full debrief (POST /debrief/generate): nested general_information, study_design, etc.
+    """
     with open(path, "r", encoding="utf-8") as f:
         raw = json.load(f)
 
@@ -43,46 +48,60 @@ def load_congress_library_json(path: str) -> list[dict]:
 
     abstracts = []
     for item in raw:
-        gi = item.get("general_information", {})
-        abstract = {
-            "id": gi.get("abstract_number") or item.get("abstractNo") or item.get("id", ""),
-            "title": gi.get("title") or item.get("title", ""),
-            "session_type": gi.get("presentation_type") or gi.get("session") or item.get("session", ""),
-            "authors": gi.get("first_author") or item.get("first_author", ""),
-            "company": gi.get("sponsor") or item.get("sponsor", ""),
-            "product": "",
-            "mechanism_of_action": "",
-            "disease_area": "",
-            "phase": "",
-            "abstract_body": "",
-        }
+        gi = item.get("general_information")
 
-        sd = item.get("study_design", {})
-        if sd:
-            abstract["phase"] = sd.get("phase", "")
-            pop = sd.get("population", {})
-            if pop and pop.get("key_inclusion_criteria"):
-                abstract["disease_area"] = "; ".join(pop["key_inclusion_criteria"][:2])
+        if gi:
+            # Full debrief response shape
+            abstract = {
+                "id": gi.get("abstract_number", ""),
+                "title": gi.get("title", ""),
+                "session_type": gi.get("presentation_type") or gi.get("session", ""),
+                "authors": gi.get("first_author", ""),
+                "company": gi.get("sponsor", ""),
+                "product": "",
+                "mechanism_of_action": "",
+                "disease_area": "",
+                "phase": "",
+                "abstract_body": "",
+            }
+            sd = item.get("study_design", {})
+            if sd:
+                abstract["phase"] = sd.get("phase", "")
+            bo = item.get("background_and_objectives", {})
+            if bo:
+                parts = []
+                if bo.get("background"):
+                    parts.append(bo["background"])
+                if bo.get("study_objectives"):
+                    parts.append("Objectives: " + "; ".join(bo["study_objectives"]))
+                abstract["abstract_body"] = " ".join(parts)
+            sc = item.get("summary_and_conclusion")
+            if sc:
+                abstract["abstract_body"] = (abstract["abstract_body"] + " Conclusion: " + sc).strip()
+        else:
+            # Simple list endpoint shape: {id, abstractNo, title, ...}
+            abstract_no = item.get("abstractNo") or item.get("abstract_number") or ""
+            raw_id = item.get("id", "")
+            display_id = abstract_no if abstract_no else raw_id[:12] if len(raw_id) > 12 else raw_id
 
-        bo = item.get("background_and_objectives", {})
-        if bo:
-            parts = []
-            if bo.get("background"):
-                parts.append(bo["background"])
-            if bo.get("study_objectives"):
-                parts.append("Objectives: " + "; ".join(bo["study_objectives"]))
-            abstract["abstract_body"] = " ".join(parts)
-
-        sc = item.get("summary_and_conclusion")
-        if sc and abstract["abstract_body"]:
-            abstract["abstract_body"] += " Conclusion: " + sc
-        elif sc:
-            abstract["abstract_body"] = sc
+            title = item.get("title", "")
+            abstract = {
+                "id": display_id,
+                "title": title,
+                "session_type": item.get("session", item.get("presentation_type", "")),
+                "authors": item.get("first_author", item.get("authors", "")),
+                "company": item.get("sponsor", item.get("company", "")),
+                "product": item.get("product", ""),
+                "mechanism_of_action": item.get("mechanism_of_action", ""),
+                "disease_area": item.get("disease_area", item.get("indication", "")),
+                "phase": item.get("phase", ""),
+                "abstract_body": "",
+            }
 
         if not abstract["abstract_body"]:
-            abstract["abstract_body"] = abstract["title"]
+            abstract["abstract_body"] = ""
 
-        if abstract["title"]:
+        if abstract.get("title"):
             abstracts.append(abstract)
 
     return abstracts
@@ -253,12 +272,14 @@ def build_abstract_block(story, abstract, idx):
     for label, value in fields:
         if value:
             field_parts.append(f"<b>{label}:</b> {value}")
-    elements.append(Paragraph("  |  ".join(field_parts), styles["small"]))
-    elements.append(Spacer(1, 4))
+    if field_parts:
+        elements.append(Paragraph("  |  ".join(field_parts), styles["small"]))
+        elements.append(Spacer(1, 4))
 
     body = abstract.get("abstract_body", "")
-    elements.append(Paragraph(body, styles["abstract_body"]))
-    elements.append(Spacer(1, 2))
+    if body:
+        elements.append(Paragraph(body, styles["abstract_body"]))
+        elements.append(Spacer(1, 2))
     elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor("#CCCCCC")))
     elements.append(Spacer(1, 6))
 
