@@ -5,16 +5,20 @@
 
   Step 1: Lists all congresses and finds ACC by name.
   Step 2: Fetches all abstracts for that congress.
-  Step 3: Saves the full list + a summary to acc-abstracts.json / acc-abstracts-summary.txt.
+  Step 3: Filters to CV-relevant abstracts by keyword matching on titles.
+  Step 4: Saves filtered list + summary.
 
   Copy acc-abstracts.json back to the laptop (OneDrive or git) and run
   build_tiering_pdf.py --input acc-abstracts.json to generate the tiering PDF.
 
 .NOTES
-  Run from the tiering_experiment folder:
+  Run from the repo folder:
     .\fetch-acc-abstracts.ps1
 
-  Or specify a known congress ID directly:
+  Save ALL abstracts (skip CV filter):
+    .\fetch-acc-abstracts.ps1 -NoFilter
+
+  Specify a known congress ID directly:
     .\fetch-acc-abstracts.ps1 -CongressId "some-uuid-here"
 
   Uses the same header-role auth as the debrief engine's GET endpoints
@@ -24,7 +28,8 @@
 param(
   [string]$CongressId = "",
   [string]$UserId = "oremland",
-  [string]$CongressName = "ACC"
+  [string]$CongressName = "ACC",
+  [switch]$NoFilter
 )
 
 $ErrorActionPreference = "Stop"
@@ -108,12 +113,59 @@ elseif ($response.abstracts)      { $abstracts = $response.abstracts }
 elseif ($response.data)           { $abstracts = $response.data }
 else                              { $abstracts = @($response) }
 
-Write-Output "Retrieved $($abstracts.Count) abstracts"
+Write-Output "Retrieved $($abstracts.Count) total abstracts"
 
-# --- Step 3: Save ---
+# --- Step 3: Filter to CV-relevant abstracts ---
+if (-not $NoFilter) {
+  # Keywords that identify CV/cardiology-relevant abstracts.
+  # Covers Merck CV assets (vericiguat, enlicitide, MK-0616), HF, lipids,
+  # ASCVD, and key competitors (SGLT2i, PCSK9, ARNI, etc.)
+  $cvKeywords = @(
+    # Disease areas
+    "heart failure", "HFrEF", "HFpEF", "HFmrEF", "cardiomyopathy",
+    "cardiovascular", "cardiac", "cardio",
+    "atheroscler", "ASCVD", "coronary", "myocardial", "infarction",
+    "arrhythmia", "atrial fibrillation", "hypertension", "blood pressure",
+    "hyperlipid", "dyslipid", "cholesterol", "LDL-C", "LDL", "lipid",
+    "stroke", "thrombosis", "anticoagul", "thromboemboli",
+    "aortic", "valvular", "endocarditis", "pericardi",
+    # Merck CV assets
+    "vericiguat", "Verquvo", "VICTORIA", "VICTOR",
+    "enlicitide", "MK-0616", "MK0616", "PCSK9",
+    # Competitors and key drug classes
+    "empagliflozin", "Jardiance", "dapagliflozin", "Farxiga", "SGLT2",
+    "sacubitril", "Entresto", "ARNI",
+    "evolocumab", "Repatha", "alirocumab", "Praluent",
+    "inclisiran", "Leqvio",
+    "bempedoic", "Nexletol",
+    "statin", "ezetimibe",
+    # Trial design keywords
+    "ejection fraction", "NT-proBNP", "BNP", "troponin",
+    "MACE", "major adverse cardiovascular"
+  )
+
+  $pattern = ($cvKeywords | ForEach-Object { [regex]::Escape($_) }) -join "|"
+  $filtered = $abstracts | Where-Object {
+    $title = if ($_.title) { $_.title } else { "" }
+    $title -match $pattern
+  }
+
+  Write-Output "CV-filtered: $($filtered.Count) of $($abstracts.Count) abstracts match CV keywords"
+
+  # Save the full set too, in case you want it later
+  $fullJson = $abstracts | ConvertTo-Json -Depth 10
+  Write-Utf8 "acc-abstracts-all.json" $fullJson
+  Write-Output "Wrote acc-abstracts-all.json (all $($abstracts.Count) abstracts, unfiltered)"
+
+  $abstracts = $filtered
+} else {
+  Write-Output "No filter applied (-NoFilter flag set)"
+}
+
+# --- Step 4: Save ---
 $jsonOut = $abstracts | ConvertTo-Json -Depth 10
 Write-Utf8 "acc-abstracts.json" $jsonOut
-Write-Output "Wrote acc-abstracts.json ($([math]::Round($jsonOut.Length / 1024))KB)"
+Write-Output "Wrote acc-abstracts.json ($($abstracts.Count) abstracts, $([math]::Round($jsonOut.Length / 1024))KB)"
 
 # Quick summary
 $summaryLines = @("ID | Title (first 80 chars)")
