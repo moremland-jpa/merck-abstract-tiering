@@ -1,15 +1,15 @@
 # Congress Abstract Tiering Experiment
 
-AI-assisted tiering of congress abstracts against Merck's 2025 Data Tiering Criteria. Generates a PDF to feed to GPTeal for classification, then compares results against manual ground truth.
+AI-assisted tiering of congress abstracts against Merck's 2025 Data Tiering Criteria. Generates an Excel workbook to feed to GPTeal for classification, then compares results against manual ground truth.
 
 ## Quick start (sample data)
 
 ```powershell
-pip install reportlab
-python build_tiering_pdf.py
+pip install openpyxl
+python build_tiering_xlsx.py
 ```
 
-Generates `ACC_Tiering_Experiment.pdf` with 12 synthetic ACC/CV abstracts.
+Generates `Tiering_Experiment.xlsx` with 12 synthetic ACC/CV abstracts.
 
 ## With real Congress Library data (VDI only)
 
@@ -17,8 +17,11 @@ Generates `ACC_Tiering_Experiment.pdf` with 12 synthetic ACC/CV abstracts.
 # 1. Pull abstracts (requires Merck network)
 .\fetch-acc-abstracts.ps1
 
-# 2. Build PDF from real data
-python build_tiering_pdf.py --input acc-abstracts.json --limit 30
+# 2. Build Excel from real data
+python build_tiering_xlsx.py --input acc-abstracts.json --limit 30
+
+# Custom congress name + output:
+python build_tiering_xlsx.py --input aha-abstracts.json --congress "AHA 2026" -o AHA_Tiering.xlsx
 ```
 
 ## Files
@@ -26,21 +29,27 @@ python build_tiering_pdf.py --input acc-abstracts.json --limit 30
 | File | Purpose |
 |------|---------|
 | `fetch-acc-abstracts.ps1` | Pulls abstracts from Congress Library API (VDI only) |
-| `build_tiering_pdf.py` | Generates the tiering experiment PDF |
+| `build_tiering_xlsx.py` | Generates the tiering experiment Excel workbook |
+| `build_tiering_pdf.py` | (Legacy) PDF version of the tiering experiment |
 | `sample_acc_data.py` | 12 synthetic ACC abstracts with ground-truth tiers |
 | `requirements.txt` | Python dependencies |
 
+## Excel structure
+
+- **Tab 1 ("Tiering Criteria"):** Merck 2025 tier definitions, activity distinctions, and CV portfolio context (Verquvo, Enlicitide)
+- **Tab 2 ("Abstracts"):** Abstract data with columns for ID, Title, Session Type, Authors, Company, Product, MoA, Disease Area, Phase, Abstract Body, plus blank **Assigned Tier**, **Confidence**, and **Rationale** columns for GPTeal to fill in
+
 ## GPTeal prompt
 
-Upload the PDF and paste:
+Upload the Excel file and paste:
 
-> I've uploaded a PDF containing Merck's Data Tiering Criteria (2025) and congress abstracts from ACC 2026 (Cardiovascular therapeutic area). For each abstract, please:
+> I've uploaded an Excel workbook. The "Tiering Criteria" tab contains Merck's 2025 Data Tiering Criteria and CV portfolio context. The "Abstracts" tab contains congress abstracts to tier.
 >
-> 1. Assign a tier (Tier 1, Tier 2, or Tier 3) based on the criteria in the document
-> 2. Rate your confidence (High, Medium, Low)
-> 3. Cite the specific tiering criterion that most applies
-> 4. Give a 1-2 sentence rationale
+> For each abstract on the Abstracts tab, please fill in the three blank columns:
+> 1. **Assigned Tier** (Tier 1, Tier 2, or Tier 3) based on the criteria
+> 2. **Confidence** (High, Medium, or Low)
+> 3. **Rationale** citing the specific criterion and a 1-2 sentence explanation
 >
-> Consider: Is this a Merck asset or competitor? Is this a primary endpoint or subgroup analysis? Is this results data or a trial-in-progress design? How relevant is this to Merck's CV portfolio (Verquvo, Enlicitide)?
+> Consider: Is this a Merck asset or competitor? Primary endpoint or subgroup analysis? Results data or trial-in-progress? Relevance to Merck's CV portfolio (Verquvo, Enlicitide)?
 >
-> Return results as a table with columns: ID, Title (short), Company, Assigned Tier, Confidence, Primary Criterion, Rationale.
+> Please return the updated Excel file with those columns filled in.

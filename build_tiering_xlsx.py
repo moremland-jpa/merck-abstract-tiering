@@ -1,0 +1,356 @@
+"""
+Build an Excel workbook with tiering criteria + congress abstracts for GPTeal.
+
+Tab 1 ("Tiering Criteria"): Merck 2025 tiering definitions + CV portfolio context.
+Tab 2 ("Abstracts"): Abstract data with blank Tier / Confidence / Rationale columns
+                      for GPTeal to fill in.
+
+Usage:
+    # With built-in sample data (12 synthetic ACC abstracts):
+    python build_tiering_xlsx.py
+
+    # With real abstracts from Congress Library JSON:
+    python build_tiering_xlsx.py --input acc-abstracts.json
+
+    # Limit abstracts:
+    python build_tiering_xlsx.py --input acc-abstracts.json --limit 30
+
+    # Custom output + congress name:
+    python build_tiering_xlsx.py --input acc-abstracts.json -o AHA_Tiering.xlsx --congress "AHA 2026"
+"""
+import argparse
+import json
+import os
+import sys
+
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+DEFAULT_OUTPUT = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "Tiering_Experiment.xlsx"
+)
+
+NAVY = "0C2340"
+TEAL = "00857C"
+LIME = "A4D233"
+TIER1_GREEN = "D4EDDA"
+TIER2_YELLOW = "FFF3CD"
+TIER3_GRAY = "E2E3E5"
+LIGHT_TEAL = "E6F3F2"
+WHITE = "FFFFFF"
+
+HEADER_FONT = Font(name="Calibri", bold=True, color=WHITE, size=11)
+HEADER_FILL = PatternFill(start_color=NAVY, end_color=NAVY, fill_type="solid")
+TEAL_FONT = Font(name="Calibri", bold=True, color=TEAL, size=12)
+NAVY_FONT = Font(name="Calibri", bold=True, color=NAVY, size=11)
+BODY_FONT = Font(name="Calibri", size=10)
+BOLD_FONT = Font(name="Calibri", bold=True, size=10)
+TITLE_FONT = Font(name="Calibri", bold=True, color=NAVY, size=16)
+THIN_BORDER = Border(
+    left=Side(style="thin", color="AAAAAA"),
+    right=Side(style="thin", color="AAAAAA"),
+    top=Side(style="thin", color="AAAAAA"),
+    bottom=Side(style="thin", color="AAAAAA"),
+)
+WRAP = Alignment(wrap_text=True, vertical="top")
+
+
+def load_congress_library_json(path: str) -> list[dict]:
+    with open(path, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+
+    if isinstance(raw, dict):
+        raw = raw.get("abstracts", raw.get("data", [raw]))
+
+    abstracts = []
+    for item in raw:
+        gi = item.get("general_information")
+
+        if gi:
+            abstract = {
+                "id": gi.get("abstract_number", ""),
+                "title": gi.get("title", ""),
+                "session_type": gi.get("presentation_type") or gi.get("session", ""),
+                "authors": gi.get("first_author", ""),
+                "company": gi.get("sponsor", ""),
+                "product": "",
+                "mechanism_of_action": "",
+                "disease_area": "",
+                "phase": "",
+                "abstract_body": "",
+            }
+            sd = item.get("study_design", {})
+            if sd:
+                abstract["phase"] = sd.get("phase", "")
+            bo = item.get("background_and_objectives", {})
+            if bo:
+                parts = []
+                if bo.get("background"):
+                    parts.append(bo["background"])
+                if bo.get("study_objectives"):
+                    parts.append("Objectives: " + "; ".join(bo["study_objectives"]))
+                abstract["abstract_body"] = " ".join(parts)
+            sc = item.get("summary_and_conclusion")
+            if sc:
+                abstract["abstract_body"] = (
+                    abstract["abstract_body"] + " Conclusion: " + sc
+                ).strip()
+        else:
+            abstract_no = (
+                item.get("abstract_no")
+                or item.get("abstractNo")
+                or item.get("abstract_number")
+                or ""
+            )
+            raw_id = item.get("abstract_id") or item.get("id", "")
+            display_id = (
+                abstract_no
+                if abstract_no
+                else raw_id[:12] if len(raw_id) > 12 else raw_id
+            )
+
+            abstract = {
+                "id": display_id,
+                "title": item.get("title", ""),
+                "session_type": item.get(
+                    "session", item.get("presentation_type", "")
+                ),
+                "authors": item.get("first_author", item.get("authors", "")),
+                "company": item.get("sponsor", item.get("company", "")),
+                "product": item.get("product", ""),
+                "mechanism_of_action": item.get("mechanism_of_action", ""),
+                "disease_area": item.get(
+                    "disease_area", item.get("indication", "")
+                ),
+                "phase": item.get("phase", ""),
+                "abstract_body": "",
+            }
+
+        if not abstract.get("abstract_body"):
+            abstract["abstract_body"] = ""
+
+        if abstract.get("title"):
+            abstracts.append(abstract)
+
+    return abstracts
+
+
+def _write_criteria_sheet(ws, congress_name: str, n_abstracts: int):
+    ws.sheet_properties.tabColor = TEAL
+    ws.column_dimensions["A"].width = 90
+
+    row = 1
+    ws.cell(row=row, column=1, value=f"{congress_name} Abstract Tiering Experiment").font = TITLE_FONT
+    row += 1
+    ws.cell(row=row, column=1, value=(
+        f"This workbook contains {n_abstracts} congress abstracts (Abstracts tab) "
+        "and the Merck 2025 tiering criteria below. Please tier each abstract as "
+        "Tier 1, Tier 2, or Tier 3 based on these criteria, and fill in the "
+        "Assigned Tier, Confidence, and Rationale columns on the Abstracts tab."
+    )).font = BODY_FONT
+    ws.cell(row=row, column=1).alignment = WRAP
+    ws.row_dimensions[row].height = 45
+
+    row += 2
+    ws.cell(row=row, column=1, value="MERCK AND MSD DATA TIERING CRITERIA (2025)").font = TEAL_FONT
+    row += 1
+
+    tiers = [
+        ("TIER 1", TIER1_GREEN, [
+            "Phase 3 first primary endpoint, additional primary endpoint, or interim analysis (IA)",
+            "Phase 2 that are practice-changing and/or have a path to accelerated approval",
+            "New pipeline/assets data with standout efficacy/safety signals in Phase 1-2 studies",
+            "Impactful new pipeline and assets data",
+        ]),
+        ("TIER 2", TIER2_YELLOW, [
+            "Data in which teams need to be prepared to respond",
+            "Additional data analysis for Phase 3 studies that may represent relevant further evidence of efficacy/safety in ITT and/or cohort group",
+            "Impactful non-interventional data",
+        ]),
+        ("TIER 3 / TIP", TIER3_GRAY, [
+            "All other Merck data where enterprise-level response is not necessary, including trials in progress (TIP)",
+        ]),
+    ]
+
+    for tier_name, bg_color, criteria in tiers:
+        ws.cell(row=row, column=1, value=tier_name).font = NAVY_FONT
+        ws.cell(row=row, column=1).fill = PatternFill(
+            start_color=bg_color, end_color=bg_color, fill_type="solid"
+        )
+        row += 1
+        for c in criteria:
+            ws.cell(row=row, column=1, value=f"  •  {c}").font = BODY_FONT
+            ws.cell(row=row, column=1).alignment = WRAP
+            ws.row_dimensions[row].height = 30
+            row += 1
+        row += 1
+
+    ws.cell(row=row, column=1, value="NOTES").font = NAVY_FONT
+    row += 1
+    notes = [
+        "Tier 1 data to be highlighted in a press release will be confirmed by the steering committee.",
+        "Alliance and external collaboration data (determination of internal or competitor nature, tiering and company response) will be considered case by case.",
+        "\"Impactful\" may be positive or negative data.",
+    ]
+    for n in notes:
+        ws.cell(row=row, column=1, value=f"  –  {n}").font = BODY_FONT
+        ws.cell(row=row, column=1).alignment = WRAP
+        ws.row_dimensions[row].height = 30
+        row += 1
+
+    row += 1
+    ws.cell(row=row, column=1, value="TIER 1 vs. TIER 2 ACTIVITIES").font = NAVY_FONT
+    row += 1
+    activities = [
+        "Tier 1 only: Study messages, consideration for press release, considerations for inclusion in WWCB, Verbal Response Documents (VRDs), Core Response Document (CRD).",
+        "Both Tier 1 and Tier 2: Study statements, earned media, thought leadership, sponsored content, digital/social media.",
+        "Tier 2 only: Consideration for inclusion in curtain raiser when available. Under exceptional circumstances: consideration for CRD and VRD.",
+    ]
+    for a in activities:
+        ws.cell(row=row, column=1, value=a).font = BODY_FONT
+        ws.cell(row=row, column=1).alignment = WRAP
+        ws.row_dimensions[row].height = 30
+        row += 1
+
+    row += 1
+    ws.cell(row=row, column=1, value="MERCK CV PORTFOLIO CONTEXT").font = TEAL_FONT
+    row += 1
+    ws.cell(row=row, column=1, value="Marketed Products").font = NAVY_FONT
+    row += 1
+    ws.cell(row=row, column=1, value=(
+        "Verquvo (vericiguat) - sGC stimulator for heart failure with reduced ejection "
+        "fraction (HFrEF). Approved based on VICTORIA trial. Competes with SGLT2 inhibitors "
+        "(empagliflozin/Jardiance, dapagliflozin/Farxiga) and ARNIs (sacubitril/valsartan/Entresto)."
+    )).font = BODY_FONT
+    ws.cell(row=row, column=1).alignment = WRAP
+    ws.row_dimensions[row].height = 45
+    row += 1
+
+    ws.cell(row=row, column=1, value="Pipeline Assets").font = NAVY_FONT
+    row += 1
+    ws.cell(row=row, column=1, value=(
+        "Enlicitide (MK-0616) - Oral PCSK9 inhibitor for hyperlipidemia/ASCVD. Phase 2b "
+        "completed, Phase 3 CVOT underway. Competes with injectable PCSK9 inhibitors "
+        "(evolocumab/Repatha, alirocumab/Praluent), inclisiran/Leqvio (siRNA, twice-yearly), "
+        "and bempedoic acid/Nexletol."
+    )).font = BODY_FONT
+    ws.cell(row=row, column=1).alignment = WRAP
+    ws.row_dimensions[row].height = 45
+
+
+def _write_abstracts_sheet(ws, abstracts: list[dict]):
+    ws.sheet_properties.tabColor = NAVY
+
+    columns = [
+        ("ID", 14),
+        ("Title", 60),
+        ("Session Type", 18),
+        ("Authors", 20),
+        ("Company", 16),
+        ("Product", 16),
+        ("Mechanism of Action", 22),
+        ("Disease Area", 18),
+        ("Phase", 10),
+        ("Abstract Body", 50),
+        ("Assigned Tier", 14),
+        ("Confidence", 14),
+        ("Rationale", 40),
+    ]
+
+    for col_idx, (name, width) in enumerate(columns, 1):
+        cell = ws.cell(row=1, column=col_idx, value=name)
+        cell.font = HEADER_FONT
+        cell.fill = HEADER_FILL
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = THIN_BORDER
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    ws.row_dimensions[1].height = 25
+    ws.auto_filter.ref = f"A1:{get_column_letter(len(columns))}1"
+    ws.freeze_panes = "A2"
+
+    tier_fill = PatternFill(start_color=LIGHT_TEAL, end_color=LIGHT_TEAL, fill_type="solid")
+
+    for row_idx, a in enumerate(abstracts, 2):
+        values = [
+            a.get("id", ""),
+            a.get("title", ""),
+            a.get("session_type", ""),
+            a.get("authors", ""),
+            a.get("company", ""),
+            a.get("product", ""),
+            a.get("mechanism_of_action", ""),
+            a.get("disease_area", ""),
+            a.get("phase", ""),
+            a.get("abstract_body", ""),
+            "",  # Assigned Tier
+            "",  # Confidence
+            "",  # Rationale
+        ]
+        for col_idx, val in enumerate(values, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.font = BODY_FONT
+            cell.alignment = WRAP
+            cell.border = THIN_BORDER
+            if col_idx >= 11:
+                cell.fill = tier_fill
+
+        ws.row_dimensions[row_idx].height = 30
+
+
+def build_xlsx(
+    abstracts: list[dict], output_path: str, congress_name: str = "ACC 2026"
+):
+    wb = Workbook()
+    wb.properties.creator = ""
+    wb.properties.lastModifiedBy = ""
+    wb.properties.title = ""
+    wb.properties.subject = ""
+    wb.properties.description = ""
+    wb.properties.keywords = ""
+    wb.properties.category = ""
+
+    ws_criteria = wb.active
+    ws_criteria.title = "Tiering Criteria"
+    _write_criteria_sheet(ws_criteria, congress_name, len(abstracts))
+
+    ws_abstracts = wb.create_sheet("Abstracts")
+    _write_abstracts_sheet(ws_abstracts, abstracts)
+
+    wb.save(output_path)
+    print(f"Excel saved to {output_path} ({len(abstracts)} abstracts)")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Build tiering experiment Excel")
+    parser.add_argument(
+        "--input", "-i", help="Congress Library JSON or any JSON with abstract data"
+    )
+    parser.add_argument("--limit", "-n", type=int, help="Max abstracts to include")
+    parser.add_argument("--output", "-o", default=DEFAULT_OUTPUT, help="Output path")
+    parser.add_argument(
+        "--congress", default="ACC 2026", help="Congress name for the title"
+    )
+    args = parser.parse_args()
+
+    if args.input:
+        print(f"Loading abstracts from {args.input}...")
+        abstracts = load_congress_library_json(args.input)
+        print(f"Loaded {len(abstracts)} abstracts")
+    else:
+        print("Using sample ACC 2026 data (12 synthetic abstracts)...")
+        from sample_acc_data import SAMPLE_ABSTRACTS
+        abstracts = SAMPLE_ABSTRACTS
+
+    if args.limit and len(abstracts) > args.limit:
+        print(f"Limiting to first {args.limit} abstracts")
+        abstracts = abstracts[:args.limit]
+
+    build_xlsx(abstracts, args.output, args.congress)
+
+
+if __name__ == "__main__":
+    main()

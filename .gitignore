@@ -7,3 +7,5 @@ acc-abstracts-all.json
 acc-abstracts-summary.txt
 local-samples/
 results/
+*.xlsx
+*.pdf
