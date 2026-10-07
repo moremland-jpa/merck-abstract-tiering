@@ -154,6 +154,20 @@ def _write_criteria_sheet(ws, congress_name: str, n_abstracts: int):
     ws.cell(row=row, column=1).alignment = WRAP
     ws.row_dimensions[row].height = 45
 
+    row += 1
+    ITALIC_FONT = Font(name="Calibri", italic=True, size=10, color="333333")
+    ws.cell(row=row, column=1, value=(
+        "IMPORTANT: You are working from abstract titles only. Full abstract text, "
+        "study phase, endpoint details, and sponsor information may not be available. "
+        "Where these details cannot be determined from the title alone, note what is "
+        "uncertain in the Rationale column and set Confidence accordingly (likely Low "
+        "or Medium). Do not force a high-confidence call when the title does not "
+        "provide enough information. The purpose of this experiment is to evaluate "
+        "what level of tiering accuracy is achievable from titles alone."
+    )).font = ITALIC_FONT
+    ws.cell(row=row, column=1).alignment = WRAP
+    ws.row_dimensions[row].height = 60
+
     row += 2
     ws.cell(row=row, column=1, value="MERCK AND MSD DATA TIERING CRITERIA (2025)").font = TEAL_FONT
     row += 1
@@ -202,17 +216,19 @@ def _write_criteria_sheet(ws, congress_name: str, n_abstracts: int):
         row += 1
 
     row += 1
-    ws.cell(row=row, column=1, value="TIER 1 vs. TIER 2 ACTIVITIES").font = NAVY_FONT
+    ws.cell(row=row, column=1, value="TITLE-ONLY TIERING GUIDANCE").font = NAVY_FONT
     row += 1
-    activities = [
-        "Tier 1 only: Study messages, consideration for press release, considerations for inclusion in WWCB, Verbal Response Documents (VRDs), Core Response Document (CRD).",
-        "Both Tier 1 and Tier 2: Study statements, earned media, thought leadership, sponsored content, digital/social media.",
-        "Tier 2 only: Consideration for inclusion in curtain raiser when available. Under exceptional circumstances: consideration for CRD and VRD.",
+    guidance = [
+        "Look for signals in the title: trial names (e.g. VICTORIA, EMPEROR), drug names, \"Phase 3\", \"primary endpoint\", \"interim analysis\", \"first-in-human\", \"pivotal\".",
+        "Titles mentioning known Merck assets (Verquvo/vericiguat, Enlicitide/MK-0616) or key competitors (Entresto, Jardiance, Farxiga, Repatha, Leqvio) are higher priority.",
+        "\"Subgroup analysis\", \"post-hoc\", \"registry\", \"real-world evidence\", \"meta-analysis\" typically suggest Tier 2 or Tier 3.",
+        "\"Trial design\", \"rationale\", \"protocol\", \"in progress\" with no results data suggest Tier 3 / TIP.",
+        "When the title alone is ambiguous, default to Tier 3 with Low confidence rather than guessing a higher tier.",
     ]
-    for a in activities:
-        ws.cell(row=row, column=1, value=a).font = BODY_FONT
+    for g in guidance:
+        ws.cell(row=row, column=1, value=f"  •  {g}").font = BODY_FONT
         ws.cell(row=row, column=1).alignment = WRAP
-        ws.row_dimensions[row].height = 30
+        ws.row_dimensions[row].height = 35
         row += 1
 
     row += 1

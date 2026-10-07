@@ -43,13 +43,13 @@ python build_tiering_xlsx.py --input aha-abstracts.json --congress "AHA 2026" -o
 
 Upload the Excel file and paste:
 
-> I've uploaded an Excel workbook. The "Tiering Criteria" tab contains Merck's 2025 Data Tiering Criteria and CV portfolio context. The "Abstracts" tab contains congress abstracts to tier.
+> I've uploaded an Excel workbook. The "Tiering Criteria" tab contains Merck's 2025 Data Tiering Criteria, title-only tiering guidance, and CV portfolio context. The "Abstracts" tab contains congress abstracts to tier. Note: you are working from titles only -- full abstract text is not available.
 >
 > For each abstract on the Abstracts tab, please fill in the three blank columns:
 > 1. **Assigned Tier** (Tier 1, Tier 2, or Tier 3) based on the criteria
-> 2. **Confidence** (High, Medium, or Low)
-> 3. **Rationale** citing the specific criterion and a 1-2 sentence explanation
+> 2. **Confidence** (High, Medium, or Low -- be honest about what the title alone can tell you)
+> 3. **Rationale** citing the specific criterion and noting what information is missing from the title that would increase confidence
 >
-> Consider: Is this a Merck asset or competitor? Primary endpoint or subgroup analysis? Results data or trial-in-progress? Relevance to Merck's CV portfolio (Verquvo, Enlicitide)?
+> Use the title-only guidance on the Tiering Criteria tab. Look for trial names, drug names, phase indicators, and endpoint language. When the title is ambiguous, default to Tier 3 with Low confidence rather than guessing higher.
 >
 > Please return the updated Excel file with those columns filled in.
