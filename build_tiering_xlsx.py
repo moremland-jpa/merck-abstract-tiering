@@ -313,13 +313,11 @@ def _write_criteria_sheet(ws, congress_name: str, n_abstracts: int):
     ws.cell(row=row, column=1, value=(
         "IMPORTANT: Full abstract text is not available. You are tiering based on the "
         "title and the metadata columns provided (session type, authors, company, "
-        "product, mechanism of action, disease area). Use all of these signals together "
-        "-- not just the title in isolation. Where the tier cannot be confidently "
-        "determined from the available data, note what is uncertain in the Rationale "
-        "column and set Confidence accordingly (likely Low or Medium). Do not force a "
-        "high-confidence call when the data does not support it. The purpose of this "
-        "experiment is to evaluate what level of tiering accuracy is achievable without "
-        "full abstract text."
+        "product, mechanism of action, disease area). Before tiering, USE DEEP RESEARCH "
+        "to look up any unfamiliar trial names, drug names, or acronyms in the titles. "
+        "Identify the study phase, sponsor, and therapeutic area so you can tier accurately "
+        "rather than guessing. The purpose of this experiment is to evaluate what level "
+        "of tiering accuracy is achievable without full abstract text."
     )).font = ITALIC_FONT
     ws.cell(row=row, column=1).alignment = WRAP
     ws.row_dimensions[row].height = 60
@@ -372,21 +370,35 @@ def _write_criteria_sheet(ws, congress_name: str, n_abstracts: int):
         row += 1
 
     row += 1
-    ws.cell(row=row, column=1, value="TITLE-ONLY TIERING GUIDANCE").font = NAVY_FONT
+    ws.cell(row=row, column=1, value="DECISION TREE (follow in order for each abstract)").font = NAVY_FONT
     row += 1
-    guidance = [
-        "TIER 1 signals: trial names (e.g. VICTORIA, EMPEROR), \"Phase 3\", \"primary endpoint\", \"interim analysis\", \"first-in-human\", \"pivotal\", named drug with efficacy/safety results.",
-        "TIER 2 signals: \"subgroup analysis\", \"post-hoc\", \"real-world evidence\", \"registry\", \"meta-analysis\", \"outcomes\", \"safety\", named drugs or mechanisms with clinical data. Tier 2 is broad by design -- any abstract presenting clinical results or data that a medical team should be aware of belongs here.",
-        "TIER 3 / TIP signals (narrow): \"trial design\", \"rationale\", \"protocol\", \"methods\", \"in progress\" with NO results. Tier 3 is only for abstracts with no clinical results or findings -- purely design/methods descriptions or trials in progress with no data yet.",
-        "Titles mentioning known Merck assets (Verquvo/vericiguat, Enlicitide/MK-0616) or key competitors (Entresto, Jardiance, Farxiga, Repatha, Leqvio) should be Tier 1 or Tier 2, never Tier 3.",
-        "WARNING: The letters \"TIP\" appearing in an abstract title (e.g. as part of a word like \"Multiple\" or a session name) do NOT indicate \"Trial In Progress.\" Only classify as TIP when the abstract explicitly describes a trial with no results.",
-        "Default to Tier 2 (not Tier 3) when the tier is uncertain. Most congress abstracts present data worth reviewing. Reserve Tier 3 for entries that clearly have no clinical findings.",
+    decision_tree = [
+        "STEP 1 -- RESEARCH: If the title contains a trial name, drug name, or acronym you don't recognize, look it up. Identify the study phase, sponsor (is it Merck/MSD?), and whether it reports results or is design-only. Do this BEFORE assigning a tier.",
+        "STEP 2 -- CHECK MERCK RELEVANCE: Does the abstract involve a Merck/MSD asset (Verquvo, vericiguat, Enlicitide, MK-0616) or a direct competitor (Entresto, Jardiance, Farxiga, Repatha, Leqvio, Praluent, Nexletol)? If yes, it is Tier 1 or Tier 2 -- never Tier 3.",
+        "STEP 3 -- DOES IT PRESENT RESULTS? If the title suggests clinical results, outcomes, efficacy, safety data, or findings of any kind (including subgroup analyses, real-world evidence, registries, meta-analyses, case reports with clinical outcomes), it is at least Tier 2.",
+        "STEP 4 -- IS IT A MAJOR TRIAL READOUT? If it is a Phase 3 primary endpoint, interim analysis, practice-changing Phase 2, or a first-in-human/pivotal study with standout signals, upgrade to Tier 1.",
+        "STEP 5 -- ONLY if the abstract is purely a trial design, protocol description, methods paper, or explicitly states 'in progress' with no results: assign Tier 3 / TIP.",
+        "IMPORTANT: The letters \"TIP\" appearing inside a word in the title (e.g. \"Multiple\", \"Optimization\") do NOT mean \"Trial In Progress.\"",
     ]
-    for g in guidance:
-        ws.cell(row=row, column=1, value=f"  •  {g}").font = BODY_FONT
+    for i, step in enumerate(decision_tree):
+        ws.cell(row=row, column=1, value=f"  {step}").font = BODY_FONT
         ws.cell(row=row, column=1).alignment = WRAP
-        ws.row_dimensions[row].height = 35
+        ws.row_dimensions[row].height = 45 if i < 5 else 30
         row += 1
+
+    row += 1
+    ws.cell(row=row, column=1, value="EXPECTED DISTRIBUTION").font = NAVY_FONT
+    row += 1
+    dist_note = (
+        "At a typical congress, roughly 10-20% of abstracts are Tier 1, 50-70% are Tier 2, "
+        "and 15-30% are Tier 3. If your results are heavily skewed toward one tier "
+        "(e.g. >80% in any single tier), revisit the decision tree above -- you are likely "
+        "applying one step too broadly."
+    )
+    ws.cell(row=row, column=1, value=dist_note).font = ITALIC_FONT
+    ws.cell(row=row, column=1).alignment = WRAP
+    ws.row_dimensions[row].height = 45
+    row += 1
 
     row += 1
     ws.cell(row=row, column=1, value="MERCK CV PORTFOLIO CONTEXT").font = TEAL_FONT

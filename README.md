@@ -44,17 +44,24 @@ python build_tiering_xlsx.py --input aha-abstracts.json --congress "AHA 2026" -o
 Upload the Excel file and paste:
 
 > I've uploaded an Excel workbook with three tabs:
-> - **"Tiering Criteria"**: Merck's 2025 Data Tiering Criteria, title-only tiering guidance, and CV portfolio context
+> - **"Tiering Criteria"**: Merck's 2025 Data Tiering Criteria, a decision tree for tiering, and CV portfolio context
 > - **"Abstracts"**: Oral presentations, posters, featured science, and clinical cases
 > - **"Seminars"**: Cardiovascular seminars, workshops, panels, and other non-abstract sessions
 >
-> **Important:** Abstract body text is not available. You are tiering based on the title and the metadata columns (session type, authors, company, product, mechanism of action, disease area). Use all of these signals together -- not just the title in isolation.
+> **Important:** Abstract body text is not available. Before tiering, please **use deep research** to look up any trial names, drug names, or acronyms in the titles that you don't immediately recognize. Identify the study phase, sponsor (especially whether it's Merck/MSD), and therapeutic area so you can tier accurately.
 >
-> For each entry on **both** the Abstracts and Seminars tabs, please fill in the three blank columns:
-> 1. **Assigned Tier** (Tier 1, Tier 2, or Tier 3) based on the criteria
-> 2. **Confidence** (High, Medium, or Low -- be honest about what the available data can tell you)
-> 3. **Rationale** citing the specific criterion and noting what information is missing that would increase confidence
+> Then follow the **decision tree** on the Tiering Criteria tab to assign each entry. The key steps are:
+> 1. Research unfamiliar names first
+> 2. Check Merck/competitor relevance (never Tier 3 for these)
+> 3. Any abstract presenting results/outcomes/findings = at least Tier 2
+> 4. Major trial readouts (Phase 3 primary, pivotal, practice-changing) = Tier 1
+> 5. Only design/methods/protocol with NO results = Tier 3
 >
-> Use the tiering guidance on the Tiering Criteria tab. Look for trial names, drug names, phase indicators, and endpoint language in the title, and use the company/product/MoA columns to identify Merck assets and key competitors. Most congress abstracts present clinical data worth reviewing, so **default to Tier 2 when the tier is uncertain** -- reserve Tier 3 only for entries that clearly have no clinical findings (trial design only, methods, protocols, or trials in progress with no results). Note: the letters "TIP" appearing in a title do not mean "Trial In Progress."
+> For each entry on **both** the Abstracts and Seminars tabs, fill in:
+> 1. **Assigned Tier** (Tier 1, Tier 2, or Tier 3)
+> 2. **Confidence** (High, Medium, or Low)
+> 3. **Rationale** citing the specific criterion and what you found in your research
+>
+> Expected distribution: ~10-20% Tier 1, ~50-70% Tier 2, ~15-30% Tier 3. If your results are heavily skewed toward one tier, revisit the decision tree.
 >
 > Please return the updated Excel file with those columns filled in on both tabs.
