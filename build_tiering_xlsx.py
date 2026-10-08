@@ -58,6 +58,107 @@ THIN_BORDER = Border(
 WRAP = Alignment(wrap_text=True, vertical="top")
 
 
+def load_cvg_excel(path: str) -> list[dict]:
+    """Load abstracts from a CVG planner Excel export (e.g. AHA from Shannon).
+
+    Expected layout: header row at row 4, data from row 5+.
+    Blue rows are session parents, white rows are presentations (children).
+    Skips rows without a Title value.
+    """
+    from openpyxl import load_workbook
+
+    wb = load_workbook(path, read_only=True, data_only=True)
+    ws = wb.active
+
+    rows = list(ws.iter_rows(min_row=1, values_only=True))
+    wb.close()
+
+    # Find the header row (look for "Title" in first 10 rows)
+    header_row_idx = None
+    for i, row in enumerate(rows[:10]):
+        cells = [str(c).strip().lower() if c else "" for c in row]
+        if "title" in cells:
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        raise ValueError(f"Could not find header row with 'Title' column in {path}")
+
+    headers = [str(c).strip() if c else "" for c in rows[header_row_idx]]
+    col = {h.lower(): i for i, h in enumerate(headers) if h}
+
+    def _get(row, *names):
+        for name in names:
+            idx = col.get(name.lower())
+            if idx is not None and idx < len(row) and row[idx]:
+                return str(row[idx]).strip()
+        return ""
+
+    abstracts = []
+    for row in rows[header_row_idx + 1:]:
+        title = _get(row, "Title")
+        if not title or title.lower() == "moderators":
+            continue
+
+        abstract = {
+            "id": _get(row, "Abs", "Abstract", "Abstract Number", "Abstract No"),
+            "title": title,
+            "session_type": _get(row, "Session", "Session Title"),
+            "authors": _get(row, "Authors", "Presenter"),
+            "company": _get(row, "Company (Sponsor)", "Company (All)", "Company"),
+            "product": _get(row, "Primary Prdts", "All Prdts"),
+            "mechanism_of_action": _get(row, "MOAs", "MOA"),
+            "disease_area": _get(row, "Disease", "Category", "Topic"),
+            "phase": "",
+            "abstract_body": _get(row, "Full Text"),
+        }
+        abstracts.append(abstract)
+
+    return abstracts
+
+
+def load_input_file(path: str) -> list[dict]:
+    """Auto-detect input format and load abstracts."""
+    ext = os.path.splitext(path)[1].lower()
+    if ext in (".xlsx", ".xls", ".xlsm"):
+        return load_cvg_excel(path)
+    elif ext == ".csv":
+        # Convert CSV to list of dicts, then use the same CVG-style mapping
+        import csv
+        with open(path, "r", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+        abstracts = []
+        for row in rows:
+            def _get(*names):
+                for name in names:
+                    for key in row:
+                        if key.strip().lower() == name.lower():
+                            val = row[key]
+                            if val and str(val).strip():
+                                return str(val).strip()
+                return ""
+
+            title = _get("Title")
+            if not title or title.lower() == "moderators":
+                continue
+            abstracts.append({
+                "id": _get("Abs", "Abstract", "Abstract Number", "Abstract No"),
+                "title": title,
+                "session_type": _get("Session", "Session Title"),
+                "authors": _get("Authors", "Presenter"),
+                "company": _get("Company (Sponsor)", "Company (All)", "Company"),
+                "product": _get("Primary Prdts", "All Prdts"),
+                "mechanism_of_action": _get("MOAs", "MOA"),
+                "disease_area": _get("Disease", "Category", "Topic"),
+                "phase": "",
+                "abstract_body": _get("Full Text"),
+            })
+        return abstracts
+    else:
+        return load_congress_library_json(path)
+
+
 def load_congress_library_json(path: str) -> list[dict]:
     with open(path, "r", encoding="utf-8") as f:
         raw = json.load(f)
@@ -343,7 +444,7 @@ def build_xlsx(
 def main():
     parser = argparse.ArgumentParser(description="Build tiering experiment Excel")
     parser.add_argument(
-        "--input", "-i", help="Congress Library JSON or any JSON with abstract data"
+        "--input", "-i", help="Input file: CVG Excel (.xlsx), CSV, or Congress Library JSON"
     )
     parser.add_argument("--limit", "-n", type=int, help="Max abstracts to include")
     parser.add_argument("--output", "-o", default=DEFAULT_OUTPUT, help="Output path")
@@ -354,7 +455,7 @@ def main():
 
     if args.input:
         print(f"Loading abstracts from {args.input}...")
-        abstracts = load_congress_library_json(args.input)
+        abstracts = load_input_file(args.input)
         print(f"Loaded {len(abstracts)} abstracts")
     else:
         print("Using sample ACC 2026 data (12 synthetic abstracts)...")
