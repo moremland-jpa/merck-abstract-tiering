@@ -66,7 +66,7 @@ DEFAULT_CVG_SHEETS = ["AHA 2026_Full_Data"]
 SKIP_TITLES = {
     "moderators", "q&a", "panel discussion and q&a", "panel discussion",
     "break", "lunch", "welcome", "opening remarks", "closing remarks",
-    "introduction", "adjournment", "discussion",
+    "introduction", "adjournment", "discussion", "hcms moderator",
 }
 
 SEMINAR_SESSION_KEYWORDS = {
