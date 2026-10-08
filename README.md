@@ -55,6 +55,6 @@ Upload the Excel file and paste:
 > 2. **Confidence** (High, Medium, or Low -- be honest about what the available data can tell you)
 > 3. **Rationale** citing the specific criterion and noting what information is missing that would increase confidence
 >
-> Use the title-only guidance on the Tiering Criteria tab. Look for trial names, drug names, phase indicators, and endpoint language in the title, and use the company/product/MoA columns to identify Merck assets and key competitors. When the data is ambiguous, default to Tier 3 with Low confidence rather than guessing higher.
+> Use the tiering guidance on the Tiering Criteria tab. Look for trial names, drug names, phase indicators, and endpoint language in the title, and use the company/product/MoA columns to identify Merck assets and key competitors. Most congress abstracts present clinical data worth reviewing, so **default to Tier 2 when the tier is uncertain** -- reserve Tier 3 only for entries that clearly have no clinical findings (trial design only, methods, protocols, or trials in progress with no results). Note: the letters "TIP" appearing in a title do not mean "Trial In Progress."
 >
 > Please return the updated Excel file with those columns filled in on both tabs.

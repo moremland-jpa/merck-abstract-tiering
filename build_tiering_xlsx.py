@@ -375,11 +375,12 @@ def _write_criteria_sheet(ws, congress_name: str, n_abstracts: int):
     ws.cell(row=row, column=1, value="TITLE-ONLY TIERING GUIDANCE").font = NAVY_FONT
     row += 1
     guidance = [
-        "Look for signals in the title: trial names (e.g. VICTORIA, EMPEROR), drug names, \"Phase 3\", \"primary endpoint\", \"interim analysis\", \"first-in-human\", \"pivotal\".",
-        "Titles mentioning known Merck assets (Verquvo/vericiguat, Enlicitide/MK-0616) or key competitors (Entresto, Jardiance, Farxiga, Repatha, Leqvio) are higher priority.",
-        "\"Subgroup analysis\", \"post-hoc\", \"registry\", \"real-world evidence\", \"meta-analysis\" typically suggest Tier 2 or Tier 3.",
-        "\"Trial design\", \"rationale\", \"protocol\", \"in progress\" with no results data suggest Tier 3 / TIP.",
-        "When the title alone is ambiguous, default to Tier 3 with Low confidence rather than guessing a higher tier.",
+        "TIER 1 signals: trial names (e.g. VICTORIA, EMPEROR), \"Phase 3\", \"primary endpoint\", \"interim analysis\", \"first-in-human\", \"pivotal\", named drug with efficacy/safety results.",
+        "TIER 2 signals: \"subgroup analysis\", \"post-hoc\", \"real-world evidence\", \"registry\", \"meta-analysis\", \"outcomes\", \"safety\", named drugs or mechanisms with clinical data. Tier 2 is broad by design -- any abstract presenting clinical results or data that a medical team should be aware of belongs here.",
+        "TIER 3 / TIP signals (narrow): \"trial design\", \"rationale\", \"protocol\", \"methods\", \"in progress\" with NO results. Tier 3 is only for abstracts with no clinical results or findings -- purely design/methods descriptions or trials in progress with no data yet.",
+        "Titles mentioning known Merck assets (Verquvo/vericiguat, Enlicitide/MK-0616) or key competitors (Entresto, Jardiance, Farxiga, Repatha, Leqvio) should be Tier 1 or Tier 2, never Tier 3.",
+        "WARNING: The letters \"TIP\" appearing in an abstract title (e.g. as part of a word like \"Multiple\" or a session name) do NOT indicate \"Trial In Progress.\" Only classify as TIP when the abstract explicitly describes a trial with no results.",
+        "Default to Tier 2 (not Tier 3) when the tier is uncertain. Most congress abstracts present data worth reviewing. Reserve Tier 3 for entries that clearly have no clinical findings.",
     ]
     for g in guidance:
         ws.cell(row=row, column=1, value=f"  •  {g}").font = BODY_FONT
