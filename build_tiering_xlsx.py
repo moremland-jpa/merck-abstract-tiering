@@ -112,10 +112,12 @@ def _load_cvg_sheet(ws) -> list[dict]:
         if not title or title.lower().strip() in SKIP_TITLES:
             continue
 
-        # Skip session parent rows (blue rows): no abstract number AND no authors
+        # Skip session parent rows (blue rows): bare "Abs" with no number,
+        # or completely missing abstract number — AND no authors
         abs_id = _get(row, "Abs", "Abstract", "Abstract Number", "Abstract No")
         authors = _get(row, "Authors", "Presenter")
-        if not abs_id and not authors:
+        has_real_id = abs_id and abs_id.lower().strip() != "abs"
+        if not has_real_id and not authors:
             continue
 
         abstract = {
