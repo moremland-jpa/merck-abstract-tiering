@@ -69,6 +69,18 @@ SKIP_TITLES = {
     "introduction", "adjournment", "discussion",
 }
 
+SEMINAR_SESSION_KEYWORDS = {
+    "seminar", "workshop", "simulation", "hall experience",
+    "main event", "early career", "joint session",
+}
+
+
+def _is_seminar(session_type):
+    if not session_type:
+        return False
+    lower = session_type.lower()
+    return any(kw in lower for kw in SEMINAR_SESSION_KEYWORDS)
+
 
 def _load_cvg_sheet(ws) -> list[dict]:
     """Parse one CVG sheet into abstract dicts."""
@@ -279,10 +291,11 @@ def _write_criteria_sheet(ws, congress_name: str, n_abstracts: int):
     ws.cell(row=row, column=1, value=f"{congress_name} Abstract Tiering Experiment").font = TITLE_FONT
     row += 1
     ws.cell(row=row, column=1, value=(
-        f"This workbook contains {n_abstracts} congress abstracts (Abstracts tab) "
-        "and the Merck 2025 tiering criteria below. Please tier each abstract as "
-        "Tier 1, Tier 2, or Tier 3 based on these criteria, and fill in the "
-        "Assigned Tier, Confidence, and Rationale columns on the Abstracts tab."
+        f"This workbook contains {n_abstracts} congress presentations split across "
+        "two data tabs: \"Abstracts\" (oral presentations, posters, featured science, "
+        "clinical cases) and \"Seminars\" (cardiovascular seminars, workshops, panels, "
+        "and other non-abstract sessions). Please tier each entry on both tabs using "
+        "the criteria below, filling in the Assigned Tier, Confidence, and Rationale columns."
     )).font = BODY_FONT
     ws.cell(row=row, column=1).alignment = WRAP
     ws.row_dimensions[row].height = 45
@@ -453,6 +466,9 @@ def _write_abstracts_sheet(ws, abstracts: list[dict]):
 def build_xlsx(
     abstracts: list[dict], output_path: str, congress_name: str = "ACC 2026"
 ):
+    abstract_rows = [a for a in abstracts if not _is_seminar(a.get("session_type", ""))]
+    seminar_rows = [a for a in abstracts if _is_seminar(a.get("session_type", ""))]
+
     wb = Workbook()
     wb.properties.creator = ""
     wb.properties.lastModifiedBy = ""
@@ -467,10 +483,17 @@ def build_xlsx(
     _write_criteria_sheet(ws_criteria, congress_name, len(abstracts))
 
     ws_abstracts = wb.create_sheet("Abstracts")
-    _write_abstracts_sheet(ws_abstracts, abstracts)
+    _write_abstracts_sheet(ws_abstracts, abstract_rows)
+
+    ws_seminars = wb.create_sheet("Seminars")
+    _write_abstracts_sheet(ws_seminars, seminar_rows)
+    ws_seminars.sheet_properties.tabColor = TEAL
 
     wb.save(output_path)
-    print(f"Excel saved to {output_path} ({len(abstracts)} abstracts)")
+    print(
+        f"Excel saved to {output_path} "
+        f"({len(abstract_rows)} abstracts + {len(seminar_rows)} seminars)"
+    )
 
 
 def main():
