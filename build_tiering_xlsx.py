@@ -311,13 +311,15 @@ def _write_criteria_sheet(ws, congress_name: str, n_abstracts: int):
     row += 1
     ITALIC_FONT = Font(name="Calibri", italic=True, size=10, color="333333")
     ws.cell(row=row, column=1, value=(
-        "IMPORTANT: You are working from abstract titles only. Full abstract text, "
-        "study phase, endpoint details, and sponsor information may not be available. "
-        "Where these details cannot be determined from the title alone, note what is "
-        "uncertain in the Rationale column and set Confidence accordingly (likely Low "
-        "or Medium). Do not force a high-confidence call when the title does not "
-        "provide enough information. The purpose of this experiment is to evaluate "
-        "what level of tiering accuracy is achievable from titles alone."
+        "IMPORTANT: Full abstract text is not available. You are tiering based on the "
+        "title and the metadata columns provided (session type, authors, company, "
+        "product, mechanism of action, disease area). Use all of these signals together "
+        "-- not just the title in isolation. Where the tier cannot be confidently "
+        "determined from the available data, note what is uncertain in the Rationale "
+        "column and set Confidence accordingly (likely Low or Medium). Do not force a "
+        "high-confidence call when the data does not support it. The purpose of this "
+        "experiment is to evaluate what level of tiering accuracy is achievable without "
+        "full abstract text."
     )).font = ITALIC_FONT
     ws.cell(row=row, column=1).alignment = WRAP
     ws.row_dimensions[row].height = 60

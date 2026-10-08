@@ -48,13 +48,13 @@ Upload the Excel file and paste:
 > - **"Abstracts"**: Oral presentations, posters, featured science, and clinical cases
 > - **"Seminars"**: Cardiovascular seminars, workshops, panels, and other non-abstract sessions
 >
-> Note: you are working from titles only -- full abstract text is not available for most entries.
+> **Important:** Abstract body text is not available. You are tiering based on the title and the metadata columns (session type, authors, company, product, mechanism of action, disease area). Use all of these signals together -- not just the title in isolation.
 >
 > For each entry on **both** the Abstracts and Seminars tabs, please fill in the three blank columns:
 > 1. **Assigned Tier** (Tier 1, Tier 2, or Tier 3) based on the criteria
-> 2. **Confidence** (High, Medium, or Low -- be honest about what the title alone can tell you)
-> 3. **Rationale** citing the specific criterion and noting what information is missing from the title that would increase confidence
+> 2. **Confidence** (High, Medium, or Low -- be honest about what the available data can tell you)
+> 3. **Rationale** citing the specific criterion and noting what information is missing that would increase confidence
 >
-> Use the title-only guidance on the Tiering Criteria tab. Look for trial names, drug names, phase indicators, and endpoint language. When the title is ambiguous, default to Tier 3 with Low confidence rather than guessing higher.
+> Use the title-only guidance on the Tiering Criteria tab. Look for trial names, drug names, phase indicators, and endpoint language in the title, and use the company/product/MoA columns to identify Merck assets and key competitors. When the data is ambiguous, default to Tier 3 with Low confidence rather than guessing higher.
 >
 > Please return the updated Excel file with those columns filled in on both tabs.
