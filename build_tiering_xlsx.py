@@ -18,6 +18,8 @@ Usage:
     # Custom output + congress name:
     python build_tiering_xlsx.py --input acc-abstracts.json -o AHA_Tiering.xlsx --congress "AHA 2026"
 """
+from __future__ import annotations
+
 import argparse
 import json
 import os
