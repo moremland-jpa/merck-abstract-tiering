@@ -60,7 +60,14 @@ THIN_BORDER = Border(
 WRAP = Alignment(wrap_text=True, vertical="top")
 
 
-DEFAULT_CVG_SHEETS = ["AHA 2026_Full_Data", "AHA 2026_LBA"]
+DEFAULT_CVG_SHEETS = ["AHA 2026_Full_Data"]
+
+# Titles that are session logistics, not abstracts
+SKIP_TITLES = {
+    "moderators", "q&a", "panel discussion and q&a", "panel discussion",
+    "break", "lunch", "welcome", "opening remarks", "closing remarks",
+    "introduction", "adjournment", "discussion",
+}
 
 
 def _load_cvg_sheet(ws) -> list[dict]:
@@ -90,7 +97,7 @@ def _load_cvg_sheet(ws) -> list[dict]:
     abstracts = []
     for row in rows[header_row_idx + 1:]:
         title = _get(row, "Title")
-        if not title or title.lower() == "moderators":
+        if not title or title.lower().strip() in SKIP_TITLES:
             continue
 
         abstract = {
@@ -110,7 +117,7 @@ def _load_cvg_sheet(ws) -> list[dict]:
     return abstracts
 
 
-def load_cvg_excel(path: str, sheets: list[str] | None = None) -> list[dict]:
+def load_cvg_excel(path, sheets=None):
     """Load abstracts from a CVG planner Excel export (e.g. AHA from Shannon).
 
     By default reads both AHA 2026_Full_Data and AHA 2026_LBA tabs (LBA rows
@@ -142,7 +149,7 @@ def load_cvg_excel(path: str, sheets: list[str] | None = None) -> list[dict]:
     return abstracts
 
 
-def load_input_file(path: str, sheets: list[str] | None = None) -> list[dict]:
+def load_input_file(path, sheets=None):
     """Auto-detect input format and load abstracts."""
     ext = os.path.splitext(path)[1].lower()
     if ext in (".xlsx", ".xls", ".xlsm"):
