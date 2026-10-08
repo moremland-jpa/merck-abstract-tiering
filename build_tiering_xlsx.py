@@ -58,22 +58,13 @@ THIN_BORDER = Border(
 WRAP = Alignment(wrap_text=True, vertical="top")
 
 
-def load_cvg_excel(path: str) -> list[dict]:
-    """Load abstracts from a CVG planner Excel export (e.g. AHA from Shannon).
+DEFAULT_CVG_SHEETS = ["AHA 2026_Full_Data", "AHA 2026_LBA"]
 
-    Expected layout: header row at row 4, data from row 5+.
-    Blue rows are session parents, white rows are presentations (children).
-    Skips rows without a Title value.
-    """
-    from openpyxl import load_workbook
 
-    wb = load_workbook(path, read_only=True, data_only=True)
-    ws = wb.active
-
+def _load_cvg_sheet(ws) -> list[dict]:
+    """Parse one CVG sheet into abstract dicts."""
     rows = list(ws.iter_rows(min_row=1, values_only=True))
-    wb.close()
 
-    # Find the header row (look for "Title" in first 10 rows)
     header_row_idx = None
     for i, row in enumerate(rows[:10]):
         cells = [str(c).strip().lower() if c else "" for c in row]
@@ -82,7 +73,7 @@ def load_cvg_excel(path: str) -> list[dict]:
             break
 
     if header_row_idx is None:
-        raise ValueError(f"Could not find header row with 'Title' column in {path}")
+        return []
 
     headers = [str(c).strip() if c else "" for c in rows[header_row_idx]]
     col = {h.lower(): i for i, h in enumerate(headers) if h}
@@ -117,11 +108,43 @@ def load_cvg_excel(path: str) -> list[dict]:
     return abstracts
 
 
-def load_input_file(path: str) -> list[dict]:
+def load_cvg_excel(path: str, sheets: list[str] | None = None) -> list[dict]:
+    """Load abstracts from a CVG planner Excel export (e.g. AHA from Shannon).
+
+    By default reads both AHA 2026_Full_Data and AHA 2026_LBA tabs (LBA rows
+    appended at the bottom). Override with --sheet to read specific tab(s).
+    """
+    from openpyxl import load_workbook
+
+    wb = load_workbook(path, read_only=True, data_only=True)
+    available = wb.sheetnames
+
+    if sheets:
+        targets = sheets
+    else:
+        targets = [s for s in DEFAULT_CVG_SHEETS if s in available]
+        if not targets:
+            targets = [available[0]]
+
+    abstracts = []
+    for sheet_name in targets:
+        if sheet_name not in available:
+            print(f"  Warning: sheet '{sheet_name}' not found, skipping (available: {available})")
+            continue
+        ws = wb[sheet_name]
+        sheet_abstracts = _load_cvg_sheet(ws)
+        print(f"  {sheet_name}: {len(sheet_abstracts)} abstracts")
+        abstracts.extend(sheet_abstracts)
+
+    wb.close()
+    return abstracts
+
+
+def load_input_file(path: str, sheets: list[str] | None = None) -> list[dict]:
     """Auto-detect input format and load abstracts."""
     ext = os.path.splitext(path)[1].lower()
     if ext in (".xlsx", ".xls", ".xlsm"):
-        return load_cvg_excel(path)
+        return load_cvg_excel(path, sheets=sheets)
     elif ext == ".csv":
         # Convert CSV to list of dicts, then use the same CVG-style mapping
         import csv
@@ -446,6 +469,10 @@ def main():
     parser.add_argument(
         "--input", "-i", help="Input file: CVG Excel (.xlsx), CSV, or Congress Library JSON"
     )
+    parser.add_argument(
+        "--sheet", action="append",
+        help="Sheet name(s) to read from Excel input (repeatable; default: AHA 2026_Full_Data + AHA 2026_LBA)",
+    )
     parser.add_argument("--limit", "-n", type=int, help="Max abstracts to include")
     parser.add_argument("--output", "-o", default=DEFAULT_OUTPUT, help="Output path")
     parser.add_argument(
@@ -455,8 +482,8 @@ def main():
 
     if args.input:
         print(f"Loading abstracts from {args.input}...")
-        abstracts = load_input_file(args.input)
-        print(f"Loaded {len(abstracts)} abstracts")
+        abstracts = load_input_file(args.input, sheets=args.sheet)
+        print(f"Loaded {len(abstracts)} abstracts total")
     else:
         print("Using sample ACC 2026 data (12 synthetic abstracts)...")
         from sample_acc_data import SAMPLE_ABSTRACTS
